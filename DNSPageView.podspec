@@ -17,5 +17,7 @@ Pod::Spec.new do |s|
 
   s.source_files = 'DNSPageView/*.swift'
   s.requires_arc = true
+  s.dependency 'CollectionViewPagingLayout'
+  s.dependency 'SnapKit'
 
 end

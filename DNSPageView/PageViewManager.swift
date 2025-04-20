@@ -97,6 +97,10 @@ public class PageViewManager {
         titleView.configure(titles: titles, style: style)
         contentView.configure(childViewControllers: childViewControllers, style: style)
     }
+    
+    public func setCurrentPage(_ page: Int) {
+        titleView.selectedTitle(at: page)
+    }
 }
 
 extension PageViewManager: PageViewContainer {

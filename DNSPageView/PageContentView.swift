@@ -25,6 +25,8 @@
 //
 
 import UIKit
+import CollectionViewPagingLayout
+import SnapKit
 
 public protocol PageContentViewDelegate: AnyObject {
     func contentView(_ contentView: PageContentView, didEndScrollAt index: Int)
@@ -33,6 +35,36 @@ public protocol PageContentViewDelegate: AnyObject {
 
 
 private let CellID = "CellID"
+public class PageContentViewCell: UICollectionViewCell, ScaleTransformView {
+    public var scaleOptions = ScaleTransformViewOptions(
+        minScale: 0.95,
+        maxScale: 1,
+        scaleRatio: 0.40,
+        translationRatio: .init(x: 0.92, y: 0.20),
+        minTranslationRatio: .init(x: -5.00, y: -5.00),
+        maxTranslationRatio: .init(x: 2.00, y: 0.00),
+        keepVerticalSpacingEqual: true,
+        keepHorizontalSpacingEqual: true,
+        scaleCurve: .linear,
+        translationCurve: .linear,
+        shadowEnabled: false,
+        blurEffectEnabled: false,
+        rotation3d: nil,
+        translation3d: nil
+    )
+
+    // The card view that we apply transforms on
+    var card: UIView!
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
 public class PageContentView: UIView {
     
     public weak var delegate: PageContentViewDelegate?
@@ -62,12 +94,12 @@ public class PageContentView: UIView {
     private var isForbidDelegate: Bool = false
     
     private (set) public lazy var collectionView: UICollectionView = {
-        let layout = PageCollectionViewFlowLayout()
-        layout.minimumLineSpacing = 0
-        layout.minimumInteritemSpacing = 0
-        layout.scrollDirection = .horizontal
+//        let layout = PageCollectionViewFlowLayout()
+//        layout.minimumLineSpacing = 0
+//        layout.minimumInteritemSpacing = 0
+//        layout.scrollDirection = .horizontal
         
-        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: CollectionViewPagingLayout())
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.isPagingEnabled = true
         collectionView.scrollsToTop = false
@@ -77,7 +109,7 @@ public class PageContentView: UIView {
         if #available(iOS 10, *) {
             collectionView.isPrefetchingEnabled = false
         }
-        collectionView.register(UICollectionViewCell.self, forCellWithReuseIdentifier: CellID)
+        collectionView.register(PageContentViewCell.self, forCellWithReuseIdentifier: CellID)
         return collectionView
     }()
     
@@ -87,24 +119,31 @@ public class PageContentView: UIView {
                "currentIndex < 0 or currentIndex >= childViewControllers.count")
         self.currentIndex = currentIndex
         super.init(frame: frame)
-        addSubview(collectionView)
+        setupCollectionView()
         configure(childViewControllers: childViewControllers, style: style, currentIndex: currentIndex)
     }
     
     required public init?(coder aDecoder: NSCoder) {
         self.currentIndex = 0
         super.init(coder: aDecoder)
-        addSubview(collectionView)
+        setupCollectionView()
     }
     
-    public override func layoutSubviews() {
-        super.layoutSubviews()
-        collectionView.frame = CGRect(origin: CGPoint.zero, size: frame.size)
-        let layout = collectionView.collectionViewLayout as! PageCollectionViewFlowLayout
-        layout.itemSize = frame.size
-        layout.offset = CGFloat(currentIndex) * frame.size.width
-        layout.invalidateLayout()
+    private func setupCollectionView() {
+        addSubview(collectionView)
+        collectionView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
     }
+    
+//    public override func layoutSubviews() {
+//        super.layoutSubviews()
+//        collectionView.frame = CGRect(origin: CGPoint.zero, size: frame.size)
+//        let layout = collectionView.collectionViewLayout as! CollectionViewPagingLayout
+//        layout.itemSize = frame.size
+//        layout.offset = CGFloat(currentIndex) * frame.size.width
+//        layout.invalidateLayout()
+//    }
 }
 
 
@@ -146,10 +185,13 @@ extension PageContentView: UICollectionViewDataSource {
         let childViewController = childViewControllers[indexPath.item]
 
         eventHandler = childViewController as? PageEventHandleable
-        childViewController.view.frame = CGRect(origin: CGPoint.zero, size: cell.contentView.frame.size)
+//        print("cell.contentView.frame.size:\(cell.contentView.frame.size)")
+//        childViewController.view.frame = CGRect(origin: CGPoint.zero, size: cell.contentView.frame.size)
             
         cell.contentView.addSubview(childViewController.view)
-        
+        childViewController.view.snp.remakeConstraints { make in
+            make.edges.equalToSuperview()
+        }
         return cell
     }
 }
@@ -243,10 +285,13 @@ extension PageContentView: PageTitleViewDelegate {
         guard currentIndex < childViewControllers.count else { return }
         
         currentIndex = index
-
-        let indexPath = IndexPath(item: index, section: 0)
         
-        collectionView.scrollToItem(at: indexPath, at: .left, animated: false)
+        guard let layout = collectionView.collectionViewLayout as? CollectionViewPagingLayout else { return }
+
+        layout.setCurrentPage(currentIndex, animated: false)
+//        let indexPath = IndexPath(item: index, section: 0)
+//        
+//        collectionView.scrollToItem(at: indexPath, at: .left, animated: false)
     }
 }
 
